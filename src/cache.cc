@@ -10,6 +10,20 @@
 uint64_t l2pf_access = 0;
 uint8_t L2C_BYPASS_KNOB = 0;    //Neelu: Set to 1: Bypass Instructions 2: Bypass Data 3: Bypass All
 
+//pf_buffer
+#define PF_BUFFER 
+
+//naman
+// static uint64_t get_hit_in_buffer =0;
+static uint64_t previous_address =0;
+static int check_point = 0;
+static int64_t stride =0;
+uint64_t get_hit_in_buffer =0;
+uint64_t bypassed =0 ;
+#define PF_BUFFER
+// #define L2C_LLC_BYPASS_PF_BUFFER 
+//naman
+
 //#define PUSH_PREFETCHES_FROM_L2_TO_L1	//Neelu: Adding to L1 PQ after filling prefetch in L2
 
 //#define CHECK_DATA_HIT_ON_STLB_HIT	//Neelu: Adding to check where the corresponding data is present in case of an STLB hit
@@ -26,6 +40,7 @@ uint8_t L2C_BYPASS_KNOB = 0;    //Neelu: Set to 1: Bypass Instructions 2: Bypass
 vector <uint64_t> regions_accessed, total_regions;                             //Neelu: regions accessed for ideal spatial prefetcher
 #define LOG2_SPATIAL_REGION_SIZE 11                             //Neelu: For 2 KB region size
 
+uint64_t old_address = 0;
 //Neelu: Not sending translation requests to STLB for L1D same page prefetch requests
 //#define NO_TRANSLATION_PENALTY_FOR_PREFETCHES
 
@@ -1864,6 +1879,68 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
             }
                 else { //read miss
 
+#ifdef PF_BUFFER
+                    //naman
+                    // uint64_t packet_tag;
+                    if (cache_type == IS_L1I && RQ.entry[index].type == LOAD)
+                    {
+                        // cout << "address on miss " <<hex << RQ.entry[index].full_physical_address << endl;
+                        // get_hit_in_buffer++;   
+                        for (int index_buffer =0 ; index_buffer<buffer_size ; index_buffer++){
+                            // cout << " address in pf_buffer "<< pf_buffer[index_buffer].address << endl;
+                            // cout << "pf_address " << hex <<  (pf_buffer[index_buffer].address ) << " and RQ address " <<  (RQ.entry[index].full_physical_address ) <<endl; 
+                            if((pf_buffer[index_buffer].address == RQ.entry[index].full_physical_address>>LOG2_BLOCK_SIZE))
+                                {   
+                                    // cout << "Hit Milla" << endl; 
+                                    get_hit_in_buffer++;
+                                    // cout << index << endl;
+                                    // cout << get_hit_in_buffer <<endl;
+                                    // cout << "entered here" << endl;
+                                    
+                                    uint32_t set = get_set(pf_buffer[index].address), way;
+                                    way = (this ->*find_victim)(cpu, pf_buffer[index].instr_id, set, block[set], pf_buffer[index].ip, pf_buffer[index].full_addr, pf_buffer[index].type);//have to fix fill_cpu to cpu
+                                
+                                if (block[set][way].valid == 0)
+                                    block[set][way].valid = 1;
+                                block[set][way].dirty = 0;
+                                block[set][way].prefetch = (pf_buffer[index].type == PREFETCH) ? 1 : 0;
+                                block[set][way].used = 0;
+
+                                //Neelu: Setting instruction and translation fields in L2C
+                                
+
+                                block[set][way].delta = pf_buffer[index].delta;
+                                block[set][way].depth = pf_buffer[index].depth;
+                                block[set][way].signature = pf_buffer[index].signature;
+                                block[set][way].confidence = pf_buffer[index].confidence;
+
+                                block[set][way].tag = pf_buffer[index].address; //@Vishal: packet->address will be physical address for L1I, as it is only filled on a miss.
+                                block[set][way].address = pf_buffer[index].address;
+                                block[set][way].full_addr = pf_buffer[index].full_addr;
+                                block[set][way].data = pf_buffer[index].data;
+                                block[set][way].cpu = pf_buffer[index].cpu;
+                                block[set][way].instr_id = pf_buffer[index].instr_id;
+                                // pf_buffer[index].valid = 0;
+                                if ((cache_type == IS_L1I)) {
+                                    if (PROCESSED.occupancy < PROCESSED.SIZE)
+                                        PROCESSED.add_queue(&RQ.entry[index]);
+                                }
+                                pf_useful++;
+                                l1i_prefetcher_cache_operate(read_cpu, RQ.entry[index].ip, 1, block[set][way].prefetch);//,RQ.entry[index].full_physical_address);	// RQ.entry[index].instr_id);  // changes made by naman ,RQ.entry[index].full_physical_address
+                                //added later
+                                
+                                block[set][way].prefetch = 0;
+                                block[set][way].used = 1;
+                                //
+                                RQ.remove_queue(&RQ.entry[index]);
+                                reads_available_this_cycle--;
+                                return;
+                            }
+                        }
+                    }
+#endif
+                    //naman
+
                     DP ( if (warmup_complete[read_cpu] ) {
                             cout << "[" << NAME << "] " << __func__ << " read miss";
                             cout << " instr_id: " << RQ.entry[index].instr_id << " address: " << hex << RQ.entry[index].address;
@@ -2911,6 +2988,37 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
 #endif
             if (block[set][way].prefetch && (block[set][way].used == 0))
                 pf_useless++;
+
+#ifdef PF_BUFFER
+            //naman
+            if ((cache_type == IS_L1I ) && packet->type == PREFETCH && packet->fill_level == FILL_L1 )//|| cache_type == IS_L2C || cache_type ==IS_LLC  (why its giving speed down )
+            {
+                // cout << "Prefetched block address phyical address "<< packet->full_addr << endl;
+                for (int i = 0; i < buffer_size; i++)
+                {
+                    if (pf_buffer[i].address == packet->address)
+                    {
+                        // cout << "same hai " << endl;
+                        return;
+                    }
+                    
+                }
+
+                if(packet->address - old_address <= 1000000){
+                    pf_buffer[buffer_index%buffer_size] = *packet;
+                    buffer_index++;
+                    // cout << "Entry in PF_Buffer"<<"packet address " << packet ->address<<endl;
+
+                    
+                    old_address = packet->address;
+                    return;
+                }
+
+                
+                old_address = packet->address;
+            }
+            //naman
+#endif
 
             if (block[set][way].valid == 0)
                 block[set][way].valid = 1;

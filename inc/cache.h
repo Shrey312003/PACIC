@@ -107,6 +107,16 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_MSHR_SIZE NUM_CPUS*64
 #define LLC_LATENCY 20  // 5 (L1I or L1D) + 10 + 20 = 35 cycles
 
+//buffer
+extern uint64_t get_hit_in_buffer ;
+extern uint64_t bypassed ;
+#define buffer_size 32
+
+
+static int buffer_index = 0;
+
+#define DEBUG_INSTRUCTION -1
+
 class CACHE : public MEMORY {
   public:
     uint32_t cpu;
@@ -182,6 +192,9 @@ class CACHE : public MEMORY {
 	     roi_instr_miss[NUM_CPUS][NUM_TYPES];
 
     uint64_t total_miss_latency;
+
+    //buffer
+    PACKET *pf_buffer;
     
     // constructor
     CACHE(string v1, uint32_t v2, int v3, uint32_t v4, uint32_t v5, uint32_t v6, uint32_t v7, uint32_t v8) 
@@ -275,6 +288,9 @@ class CACHE : public MEMORY {
 			pref_late[i][j] = 0;
 		}
 	}
+
+    //pf_buffer
+    pf_buffer =  new PACKET[buffer_size];
 
 	//Addition by Neelu end
 
