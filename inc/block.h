@@ -68,9 +68,30 @@ class DRAM_ARRAY {
     };
 };
 
+class BUFFER {
+    public: 
+    int counter;
+    uint64_t    address,
+                full_addr,
+                instr_id,
+                ip;
+    uint8_t type;
+
+    BUFFER(){
+        counter = 0;
+        address = 0;
+        full_addr = 0;
+        instr_id = 0;
+        ip = 0;
+        type = 0;
+    }
+
+};
+
 // message packet
 class PACKET {
   public:
+    int counter;
     uint8_t instruction,
 	    is_data,
 	    fill_l1i,
@@ -145,6 +166,7 @@ class PACKET {
              cycle_enqueued;
 
     PACKET() {
+        counter = 0;
         instruction = 0;
 	is_data = 1;
         fill_l1i = 0;

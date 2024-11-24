@@ -252,6 +252,9 @@ void print_roi_stats(uint32_t cpu, CACHE *cache)
 			 cout << cache->NAME;
  		         cout << " USEFUL LOAD PREFETCHES: " << setw(10) << cache->pf_useful << " PREFETCH ISSUED TO LOWER LEVEL: " << setw(10) << cache->pf_lower_level << "  ACCURACY: " <<      ((double)cache->pf_useful*100/cache->pf_lower_level) << endl;
   		         cout << cache->NAME << " TIMELY PREFETCHES: " << setw(10) << cache->pf_useful << " LATE PREFETCHES: " << cache->pf_late << " DROPPED PREFETCHES: " << cache->pf_dropped <<  endl;
+
+            cout<< cache->NAME;
+                cout<<" BUFFER ACCESS: "<<setw(10)<<cache->bypassed<<" BUFFER_HITS: "<< cache->get_hit_in_buffer << setw(10) << " HIT%: " <<setw(10) <<((double) cache->get_hit_in_buffer*100/cache->bypassed)<<endl;
 			 //cout << cache->NAME << " PREFETCHES SAME FILL-ORIGIN LEVEL: " << cache->pf_same_fill_level << " DIFFERENT FILL-ORIGIN LEVEL: " << cache->pf_lower_fill_level << endl;
 
 	//}
@@ -362,6 +365,9 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
 
     cout << cache->NAME;
     cout << " WRITEBACK ACCESS: " << setw(10) << cache->sim_access[cpu][3] << "  HIT: " << setw(10) << cache->sim_hit[cpu][3] << "  MISS: " << setw(10) << cache->sim_miss[cpu][3] << "  HIT %: " << setw(10) << ((double)cache->sim_hit[cpu][3]*100/cache->sim_access[cpu][3]) << "  MISS %: " << setw(10) << ((double)cache->sim_miss[cpu][3]*100/cache->sim_access[cpu][3]) << "   MPKI: " <<  ((double)cache->sim_miss[cpu][3]*1000/num_instrs) << endl;
+
+    cout<<cache->NAME;
+    cout<<"BUFFER ACCESS: "<<setw(10)<<cache->bypassed<<" BUFFER_HITS: "<< cache->get_hit_in_buffer << setw(10) << " HIT%: " <<setw(10) <<((double) cache->get_hit_in_buffer*100/cache->bypassed)<<endl;
 }
 
 void print_branch_stats()

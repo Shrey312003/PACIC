@@ -18,9 +18,8 @@ uint8_t L2C_BYPASS_KNOB = 0;    //Neelu: Set to 1: Bypass Instructions 2: Bypass
 static uint64_t previous_address =0;
 static int check_point = 0;
 static int64_t stride =0;
-uint64_t get_hit_in_buffer =0;
-uint64_t bypassed =0 ;
-#define PF_BUFFER
+// uint64_t get_hit_in_buffer =0;
+// uint64_t bypassed =0 ;
 // #define L2C_LLC_BYPASS_PF_BUFFER 
 //naman
 
@@ -49,6 +48,15 @@ ostream& operator<<(ostream& os, const PACKET &packet)
 {
     return os << " cpu: " << packet.cpu << " instr_id: " << packet.instr_id << " Translated: " << +packet.translated << " address: " << hex << packet.address << " full_addr: " << packet.full_addr << dec << " full_virtual_address: " << hex << packet.full_virtual_address << " full_physical_address: " << packet.full_physical_address << dec << "Type: " << +packet.type << " event_cycle: " << packet.event_cycle <<  " current_core_cycle: " <<  current_core_cycle[packet.cpu] << endl;
 };
+
+void CACHE:: handle_packet(int index,bool condition){
+    if(condition)
+        pf_buffer[index].counter = max(pf_buffer[index].counter+1, 3);
+    else
+        pf_buffer[index].counter = max(pf_buffer[index].counter-1, 0);
+    return;
+}
+
 
 void CACHE::handle_fill()
 {
@@ -2989,32 +2997,46 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
             if (block[set][way].prefetch && (block[set][way].used == 0))
                 pf_useless++;
 
+
 #ifdef PF_BUFFER
+            
+            
             //naman
             if ((cache_type == IS_L1I ) && packet->type == PREFETCH && packet->fill_level == FILL_L1 )//|| cache_type == IS_L2C || cache_type ==IS_LLC  (why its giving speed down )
             {
+                bool should_enter = 1;
                 // cout << "Prefetched block address phyical address "<< packet->full_addr << endl;
                 for (int i = 0; i < buffer_size; i++)
                 {
                     if (pf_buffer[i].address == packet->address)
                     {
-                        // cout << "same hai " << endl;
+                        handle_packet(i,1);
+
+                        if(pf_buffer[i].counter >= 2){
+                            pf_buffer[i].address = 0;
+                            pf_buffer[i].counter = 0;
+                            should_enter = 0;
+                            break;
+                        }
                         return;
                     }
-                    
                 }
 
-                if(packet->address - old_address <= 1000000){
-                    pf_buffer[buffer_index%buffer_size] = *packet;
-                    buffer_index++;
-                    // cout << "Entry in PF_Buffer"<<"packet address " << packet ->address<<endl;
+                if(std::llabs(packet->address - old_address) <= 100000 && should_enter){
+                    int index = buffer_index%buffer_size;
 
-                    
+                    if(pf_buffer[index].counter >= 1){
+                        handle_packet(index,0);
+                        return;
+                    }
+
+                    pf_buffer[index] = *packet;
+                    buffer_index++;
+
+                    bypassed ++;
                     old_address = packet->address;
                     return;
                 }
-
-                
                 old_address = packet->address;
             }
             //naman
@@ -3073,6 +3095,21 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                     cout << " lru: " << block[set][way].lru << " tag: " << hex << block[set][way].tag << " full_addr: " << block[set][way].full_addr;
                     cout << " data: " << block[set][way].data << dec << endl; });
         }
+
+        // uint32_t CACHE::get_buffer_set(uint64_t address)
+        // {
+        //     return (uint32_t) (address & ((1 << lg2(buffer_SET)) - 1)); 
+        // }
+
+        // uint32_t CACHE::get_buffer_way(uint64_t address, uint32_t set)
+        // {
+        //     for (uint32_t way=0; way<buffer_WAY; way++) {
+        //         if ((pf_buffer[set][way].tag == address)) 
+        //             return way;
+        //     }
+
+        //     return buffer_WAY;
+        // }
 
         int CACHE::check_hit(PACKET *packet)
         {

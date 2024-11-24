@@ -108,10 +108,11 @@ extern uint32_t PAGE_TABLE_LATENCY, SWAP_LATENCY;
 #define LLC_LATENCY 20  // 5 (L1I or L1D) + 10 + 20 = 35 cycles
 
 //buffer
-extern uint64_t get_hit_in_buffer ;
-extern uint64_t bypassed ;
-#define buffer_size 32
-
+// extern uint64_t get_hit_in_buffer ;
+// extern uint64_t bypassed ;
+#define buffer_size 64
+#define buffer_SET 32
+#define buffer_WAY 4
 
 static int buffer_index = 0;
 
@@ -128,6 +129,12 @@ class CACHE : public MEMORY {
     uint32_t MAX_READ, MAX_FILL;
     uint32_t reads_available_this_cycle;
     uint8_t cache_type;
+
+    //buffer stats
+    uint64_t get_hit_in_buffer ;
+    uint64_t bypassed ;
+
+    //buffer
 
     // prefetch stats
     uint64_t pf_requested,
@@ -290,6 +297,8 @@ class CACHE : public MEMORY {
 	}
 
     //pf_buffer
+    // PACKET (*pf_buffer)[buffer_WAY] = new PACKET[buffer_SET][buffer_WAY];
+
     pf_buffer =  new PACKET[buffer_size];
 
 	//Addition by Neelu end
@@ -334,6 +343,10 @@ class CACHE : public MEMORY {
          handle_prefetch(),
 		 flush_TLB(),
          handle_processed();
+        
+    void handle_packet(int index,bool condition);
+    uint32_t get_buffer_set(uint64_t address);
+    uint32_t get_buffer_way(uint64_t address, uint32_t set);
 
     void add_nonfifo_queue(PACKET_QUEUE *queue, PACKET *packet), //@Vishal: Updated from add_mshr
          update_fill_cycle(),
