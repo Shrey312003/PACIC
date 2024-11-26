@@ -75,6 +75,11 @@ uint32_t CACHE::lru_victim(uint32_t cpu, uint64_t instr_id, uint32_t set, const 
         assert(0);
     }
 
+    if(block[set][way].used == 0 && block[set][way].prefetch == 1){
+        // cout<<way<<"\n";
+        dirty ++;
+    }
+
     return way;
 }
 

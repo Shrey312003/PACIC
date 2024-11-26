@@ -257,6 +257,8 @@ void print_roi_stats(uint32_t cpu, CACHE *cache)
                 cout<<" BUFFER ACCESS: "<<setw(10)<<cache->bypassed<<" BUFFER_HITS: "<< cache->get_hit_in_buffer << setw(10) << " HIT%: " <<setw(10) <<((double) cache->get_hit_in_buffer*100/cache->bypassed)<<endl;
 			 //cout << cache->NAME << " PREFETCHES SAME FILL-ORIGIN LEVEL: " << cache->pf_same_fill_level << " DIFFERENT FILL-ORIGIN LEVEL: " << cache->pf_lower_fill_level << endl;
 
+            cout<<"Polluted fetch: "<<setw(10)<<cache->dirty<<" TOTAL PREFETCHES: "<< cache->sim_access[cpu][2] << setw(10) << " CACHE POLLUTION%: " <<setw(10) <<((double) cache->dirty*100/cache->sim_access[cpu][2])<<endl;
+
 	//}
 			cout << cache->NAME << " PREFETCHES SAME FILL-ORIGIN LEVEL: " << cache->pf_same_fill_level << " DIFFERENT FILL-ORIGIN LEVEL: " << cache->pf_lower_fill_level << endl;
 
@@ -368,6 +370,8 @@ void print_sim_stats(uint32_t cpu, CACHE *cache)
 
     cout<<cache->NAME;
     cout<<"BUFFER ACCESS: "<<setw(10)<<cache->bypassed<<" BUFFER_HITS: "<< cache->get_hit_in_buffer << setw(10) << " HIT%: " <<setw(10) <<((double) cache->get_hit_in_buffer*100/cache->bypassed)<<endl;
+
+    cout<<"Polluted fetch: "<<setw(10)<<cache->dirty<<" TOTAL PREFETCHES: "<< cache->sim_access[cpu][2] << setw(10) << " CACHE POLLUTION%: " <<setw(10) <<((double) cache->dirty*100/cache->sim_access[cpu][2])<<endl;
 }
 
 void print_branch_stats()

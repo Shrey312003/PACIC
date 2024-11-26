@@ -1904,6 +1904,10 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                                     // cout << index << endl;
                                     // cout << get_hit_in_buffer <<endl;
                                     // cout << "entered here" << endl;
+
+                                    handle_packet(index_buffer,0);
+
+                                    
                                     
                                     uint32_t set = get_set(pf_buffer[index].address), way;
                                     way = (this ->*find_victim)(cpu, pf_buffer[index].instr_id, set, block[set], pf_buffer[index].ip, pf_buffer[index].full_addr, pf_buffer[index].type);//have to fix fill_cpu to cpu
@@ -1937,11 +1941,15 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                                 l1i_prefetcher_cache_operate(read_cpu, RQ.entry[index].ip, 1, block[set][way].prefetch);//,RQ.entry[index].full_physical_address);	// RQ.entry[index].instr_id);  // changes made by naman ,RQ.entry[index].full_physical_address
                                 //added later
                                 
-                                block[set][way].prefetch = 0;
-                                block[set][way].used = 1;
+                                block[set][way].prefetch = 1;
+                                block[set][way].used = 0;
                                 //
                                 RQ.remove_queue(&RQ.entry[index]);
                                 reads_available_this_cycle--;
+
+                                // if(pf_buffer[index_buffer].counter <= 2){
+                                //     pf_buffer[index_buffer].address = 0;
+                                // }
                                 return;
                             }
                         }
@@ -3012,10 +3020,11 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                     {
                         handle_packet(i,1);
 
-                        if(pf_buffer[i].counter >= 2){
+                        if(pf_buffer[i].counter > 2){
                             pf_buffer[i].address = 0;
                             pf_buffer[i].counter = 0;
                             should_enter = 0;
+                            // cout<<"cache mein\n";
                             break;
                         }
                         return;
@@ -3023,14 +3032,16 @@ if((cache_type == IS_L1I || cache_type == IS_L1D) && reads_ready.size() == 0)
                 }
 
                 if(std::llabs(packet->address - old_address) <= 100000 && should_enter){
+                    // cout<<packet->address - old_address<<"\n";
                     int index = buffer_index%buffer_size;
 
-                    if(pf_buffer[index].counter >= 1){
+                    if(pf_buffer[index].counter > 1){
                         handle_packet(index,0);
                         return;
                     }
 
                     pf_buffer[index] = *packet;
+                    pf_buffer[index].counter = 0;
                     buffer_index++;
 
                     bypassed ++;

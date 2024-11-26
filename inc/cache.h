@@ -120,6 +120,7 @@ static int buffer_index = 0;
 
 class CACHE : public MEMORY {
   public:
+    uint64_t dirty;
     uint32_t cpu;
     const string NAME;
     const uint32_t NUM_SET, NUM_WAY, NUM_LINE, WQ_SIZE, RQ_SIZE, PQ_SIZE, MSHR_SIZE;
@@ -256,6 +257,7 @@ class CACHE : public MEMORY {
 	pf_lower_fill_level = 0;
 	pf_dropped = 0;
 	//Addition by Neelu begin
+    dirty = 0;
 	
 //	pq_full = 0;
 //	mshr_full = 0;
